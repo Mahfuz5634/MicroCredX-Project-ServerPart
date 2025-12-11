@@ -67,6 +67,35 @@ async function run() {
       }
     });
 
+
+    //loan-details
+    app.get("/loan-details/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+   const loan = await allloan.findOne({ _id: new ObjectId(id)});
+
+    if (!loan) {
+      return res.status(404).json({  
+        success: false,
+        message: "Loan Not Found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: loan,
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+});
+
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
