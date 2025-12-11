@@ -47,6 +47,26 @@ async function run() {
       }
     });
 
+    //all loan 
+    app.get("/home-allloans", async (req, res) => {
+      try {
+        const result = await allloan
+          .find()
+          .toArray();
+
+        res.send({
+          status: "success",
+          count: result.length,
+          data: result,
+        });
+      } catch (error) {
+        console.error("Error fetching home loans:", error);
+        res
+          .status(500)
+          .send({ status: "error", message: "Internal Server Error" });
+      }
+    });
+
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
