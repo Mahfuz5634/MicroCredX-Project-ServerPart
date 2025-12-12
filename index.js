@@ -25,7 +25,7 @@ async function run() {
 
     const db = client.db("microcredx");
     const allloan = db.collection("allloan");
-    const userCollection=db.collection("user");
+    const userCollection = db.collection("user");
 
     //get 6 loan
     app.get("/home-loans", async (req, res) => {
@@ -48,12 +48,10 @@ async function run() {
       }
     });
 
-    //all loan 
+    //all loan
     app.get("/home-allloans", async (req, res) => {
       try {
-        const result = await allloan
-          .find()
-          .toArray();
+        const result = await allloan.find().toArray();
 
         res.send({
           status: "success",
@@ -68,61 +66,72 @@ async function run() {
       }
     });
 
-
     //loan-details
     app.get("/loan-details/:id", async (req, res) => {
-  try {
-    const id = req.params.id;
-   const loan = await allloan.findOne({ _id: new ObjectId(id)});
+      try {
+        const id = req.params.id;
+        const loan = await allloan.findOne({ _id: new ObjectId(id) });
 
-    if (!loan) {
-      return res.status(404).json({  
-        success: false,
-        message: "Loan Not Found",
-      });
-    }
+        if (!loan) {
+          return res.status(404).json({
+            success: false,
+            message: "Loan Not Found",
+          });
+        }
 
-    res.json({
-      success: true,
-      data: loan,
+        res.json({
+          success: true,
+          data: loan,
+        });
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({
+          success: false,
+          message: "Server error",
+        });
+      }
     });
 
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
+    //user
+    app.post("/save-user", async (req, res) => {
+      try {
+        const { name, email, role } = req.body;
+        let user = await userCollection.findOne({ email });
+
+        if (!user) {
+          const newUser = {
+            name,
+            email,
+            role: role ? role : "borrower",
+            createdAt: new Date(),
+          };
+
+          await userCollection.insertOne(newUser);
+          user = newUser;
+        }
+
+        res.json(user);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
     });
-  }
-});
 
+    //get user rol
+    app.get("/user-role/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
 
+        const user = await userCollection.findOne({ email });
 
-//user
-app.post('/save-user',async (req,res)=>{
-    try {
-    const { name, email, role} = req.body;
-    let user = await userCollection.findOne({ email });
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
 
-    if (!user) {
-      const newUser = {
-        name,
-        email,
-        role: role?role:'user',
-        createdAt: new Date()
-      };
-
-      await userCollection.insertOne(newUser);
-      user = newUser;
-    }
-
-    res.json(user);
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-})
-
+        res.json({ role: user.role });
+      } catch (error) {
+        res.status(500).json({ message: error.message });
+      }
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
