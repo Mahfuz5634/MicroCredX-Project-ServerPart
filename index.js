@@ -26,7 +26,25 @@ async function run() {
     const db = client.db("microcredx");
     const allloan = db.collection("allloan");
     const userCollection = db.collection("user");
-    const loanApplication=db.collection("loan-application");
+    const loanApplication = db.collection("loan-application");
+
+
+
+
+    //delete-loan
+    app.delete('/delete-loan/:id',async(req,res)=>{
+       const id=req.params.id;
+
+       const result=await loanApplication.deleteOne({_id: new ObjectId(id)});
+       res.send(result);
+    })
+
+    //loanapplication find with email
+    app.get("/get-loan", async (req, res) => {
+      const { email } = req.query;
+      const result = await loanApplication.find({ email }).toArray();
+      res.send(result);
+    });
 
     //get 6 loan
     app.get("/home-loans", async (req, res) => {
@@ -134,59 +152,11 @@ async function run() {
       }
     });
 
-
     //loan application
- app.post("/save-loan", async (req, res) => {
-  try {
-    const {
-      email,
-      loanTitle,
-      interestRate,
-      firstName,
-      lastName,
-      contactNumber,
-      nationalId,
-      incomeSource,
-      monthlyIncome,
-      loanAmount,
-      reason,
-      address,
-      extraNotes
-    } = req.body;
-
-    // Check if any application exists with same email
-    let application = await loanApplication.findOne({ email });
-
-    // If not, create new loan application
-    if (!application) {
-      const newApplication = {
-        email,
-        loanTitle,
-        interestRate,
-        firstName,
-        lastName,
-        contactNumber,
-        nationalId,
-        incomeSource,
-        monthlyIncome,
-        loanAmount,
-        reason,
-        address,
-        extraNotes,
-        status: "Pending",
-        applicationFeeStatus: "unpaid",
-        createdAt: new Date(),
-      };
-
-      const result = await loanApplication.insertOne(newApplication);
-      return res.json(result);
-    }
-
-    // If exists → update existing
-    const updated = await loanApplication.updateOne(
-      { email },
-      {
-        $set: {
+    app.post("/save-loan", async (req, res) => {
+      try {
+        const {
+          email,
           loanTitle,
           interestRate,
           firstName,
@@ -199,17 +169,63 @@ async function run() {
           reason,
           address,
           extraNotes,
-          updatedAt: new Date(),
-        },
+        } = req.body;
+
+        
+        let application = false;
+
+        // If not, create new loan application
+        if (!application) {
+          const newApplication = {
+            email,
+            loanTitle,
+            interestRate,
+            firstName,
+            lastName,
+            contactNumber,
+            nationalId,
+            incomeSource,
+            monthlyIncome,
+            loanAmount,
+            reason,
+            address,
+            extraNotes,
+            status: "Pending",
+            applicationFeeStatus: "unpaid",
+            createdAt: new Date(),
+          };
+
+          const result = await loanApplication.insertOne(newApplication);
+          return res.json(result);
+        }
+
+        // If exists → update existing
+        const updated = await loanApplication.updateOne(
+          { email },
+          {
+            $set: {
+              loanTitle,
+              interestRate,
+              firstName,
+              lastName,
+              contactNumber,
+              nationalId,
+              incomeSource,
+              monthlyIncome,
+              loanAmount,
+              reason,
+              address,
+              extraNotes,
+              updatedAt: new Date(),
+            },
+          }
+        );
+
+        res.json(updated);
+      } catch (error) {
+        res.status(500).json({ message: error.message });
       }
-    );
-
-    res.json(updated);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
-
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
