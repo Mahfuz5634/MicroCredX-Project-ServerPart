@@ -25,6 +25,7 @@ async function run() {
 
     const db = client.db("microcredx");
     const allloan = db.collection("allloan");
+    const userCollection=db.collection("user");
 
     //get 6 loan
     app.get("/home-loans", async (req, res) => {
@@ -94,6 +95,33 @@ async function run() {
     });
   }
 });
+
+
+
+//user
+app.post('/save-user',async (req,res)=>{
+    try {
+    const { name, email, role} = req.body;
+    let user = await userCollection.findOne({ email });
+
+    if (!user) {
+      const newUser = {
+        name,
+        email,
+        role: role?role:'user',
+        createdAt: new Date()
+      };
+
+      await userCollection.insertOne(newUser);
+      user = newUser;
+    }
+
+    res.json(user);
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+})
 
 
     await client.db("admin").command({ ping: 1 });
