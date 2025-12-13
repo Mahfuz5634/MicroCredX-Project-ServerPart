@@ -28,19 +28,34 @@ async function run() {
     const userCollection = db.collection("user");
     const loanApplication = db.collection("loan-application");
 
+    
+
+    //all-loan
+    app.get("/all-loan", async (req, res) => {
+      // const { email } = req.query;
+      const result = await allloan.find().toArray();
+      res.send(result);
+    });
+
+    //all-user-api
+    app.get("/all-user", async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
 
     //delete-loan
-    app.delete("/delete-loan/:id",async(req,res)=>{
-        const id=req.params.id;
-        const result= await allloan.deleteOne({_id: new ObjectId(id)})
-        res.send(result);
-    })
+    app.delete("/delete-loan/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await allloan.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
 
     //update-loan
     app.put("/update-loan/:id", async (req, res) => {
       try {
         const id = req.params.id;
-        const { title, shortDesc, interestRate, maxLimit, category, image } = req.body;
+        const { title, shortDesc, interestRate, maxLimit, category, image } =
+          req.body;
 
         const result = await allloan.updateOne(
           { _id: new ObjectId(id) },
@@ -83,8 +98,12 @@ async function run() {
 
     //manager created loan
     app.get("/create-loan", async (req, res) => {
-      // const { email } = req.query;
-      const result = await allloan.find().toArray();
+      const { email } = req.query;
+      const result = await allloan
+        .find({
+          createdBy: email,
+        })
+        .toArray();
       res.send(result);
     });
 
