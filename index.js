@@ -28,6 +28,28 @@ async function run() {
     const userCollection = db.collection("user");
     const loanApplication = db.collection("loan-application");
 
+
+
+    //add-loan
+    app.post("/add-loan",async (req,res)=>{
+      try{
+        const loan=req.body;
+        const now=new Date();
+
+        const data={
+          ...loan,
+          createdAt:loan.createdAt || now.toISOString(),
+          updatedAt: loan.updatedAt || now.toISOString(),
+        };
+
+        const result=await allloan.insertOne(data);
+        res.send(result);
+      }
+      catch(err){
+        res.status(500).send({message:"Failed to save loan"})
+      }
+    })
+
      //get all approved loan application
     app.get("/get-Approved-loans", async (req, res) => {
       const { email } = req.query;
@@ -90,7 +112,6 @@ async function run() {
       try {
         const result = await allloan
           .find({ showOnHome: true })
-          .limit(6)
           .toArray();
 
         res.send({
