@@ -28,7 +28,46 @@ async function run() {
     const userCollection = db.collection("user");
     const loanApplication = db.collection("loan-application");
 
+     //get all approved loan application
+    app.get("/get-Approved-loans", async (req, res) => {
+      const { email } = req.query;
+      const result = await loanApplication.find({status:"Approved"}).toArray();
+      res.send(result);
+    });
 
+   
+
+    //update loan status
+    app.patch('/loan-status/:id',async(req,res)=>{
+      try{
+        const {status}=req.body;
+        const id=req.params.id;
+
+        const result= await loanApplication.updateOne(
+          {
+            _id: new ObjectId(id)
+          },
+          {
+            $set:{
+              status:status,
+              updatedAt: new Date(),
+            }
+          }
+        );
+        res.send(result)
+
+      }
+      catch(error){
+        res.status(500).send({message:"Failed to update status"});
+      }
+    });
+
+    //get all pending loan application
+    app.get("/get-allloans", async (req, res) => {
+      const { email } = req.query;
+      const result = await loanApplication.find({status:"Pending"}).toArray();
+      res.send(result);
+    });
 
 
     //delete-loan
