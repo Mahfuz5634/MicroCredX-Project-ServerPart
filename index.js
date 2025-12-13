@@ -29,76 +29,132 @@ async function run() {
     const loanApplication = db.collection("loan-application");
 
 
-
-    //add-loan
-    app.post("/add-loan",async (req,res)=>{
-      try{
-        const loan=req.body;
-        const now=new Date();
-
-        const data={
-          ...loan,
-          createdAt:loan.createdAt || now.toISOString(),
-          updatedAt: loan.updatedAt || now.toISOString(),
-        };
-
-        const result=await allloan.insertOne(data);
+    //delete-loan
+    app.delete("/delete-loan/:id",async(req,res)=>{
+        const id=req.params.id;
+        const result= await allloan.deleteOne({_id: new ObjectId(id)})
         res.send(result);
-      }
-      catch(err){
-        res.status(500).send({message:"Failed to save loan"})
-      }
     })
 
-     //get all approved loan application
-    app.get("/get-Approved-loans", async (req, res) => {
-      const { email } = req.query;
-      const result = await loanApplication.find({status:"Approved"}).toArray();
+    //update-loan
+    app.put("/update-loan/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { title, shortDesc, interestRate, maxLimit, category, image } = req.body;
+
+        const result = await allloan.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              title,
+              shortDesc,
+              interestRate,
+              maxLimit,
+              category,
+              image,
+              updatedAt: new Date(),
+            },
+          }
+        );
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({ message: "Loan not found" });
+        }
+
+        res.send({ success: true, updatedCount: result.modifiedCount });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Failed to update loan" });
+      }
+    });
+
+    //pending-loan-count
+    app.get("/pending-loans-count", async (req, res) => {
+      try {
+        const count = await loanApplication.countDocuments({
+          status: "Pending",
+        });
+
+        res.send({ count });
+      } catch (error) {
+        res.status(500).send({ message: "Failed to get count" });
+      }
+    });
+
+    //manager created loan
+    app.get("/create-loan", async (req, res) => {
+      // const { email } = req.query;
+      const result = await allloan.find().toArray();
       res.send(result);
     });
 
-   
+    //add-loan
+    app.post("/add-loan", async (req, res) => {
+      try {
+        const loan = req.body;
+        const now = new Date();
+
+        const data = {
+          ...loan,
+          createdAt: loan.createdAt || now.toISOString(),
+          updatedAt: loan.updatedAt || now.toISOString(),
+        };
+
+        const result = await allloan.insertOne(data);
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ message: "Failed to save loan" });
+      }
+    });
+
+    //get all approved loan application
+    app.get("/get-Approved-loans", async (req, res) => {
+      const { email } = req.query;
+      const result = await loanApplication
+        .find({ status: "Approved" })
+        .toArray();
+      res.send(result);
+    });
 
     //update loan status
-    app.patch('/loan-status/:id',async(req,res)=>{
-      try{
-        const {status}=req.body;
-        const id=req.params.id;
+    app.patch("/loan-status/:id", async (req, res) => {
+      try {
+        const { status } = req.body;
+        const id = req.params.id;
 
-        const result= await loanApplication.updateOne(
+        const result = await loanApplication.updateOne(
           {
-            _id: new ObjectId(id)
+            _id: new ObjectId(id),
           },
           {
-            $set:{
-              status:status,
+            $set: {
+              status: status,
               updatedAt: new Date(),
-            }
+            },
           }
         );
-        res.send(result)
-
-      }
-      catch(error){
-        res.status(500).send({message:"Failed to update status"});
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to update status" });
       }
     });
 
     //get all pending loan application
     app.get("/get-allloans", async (req, res) => {
       const { email } = req.query;
-      const result = await loanApplication.find({status:"Pending"}).toArray();
+      const result = await loanApplication
+        .find({ status: "Pending" })
+        .toArray();
       res.send(result);
     });
 
-
     //delete-loan
-    app.delete('/delete-loan/:id',async(req,res)=>{
-       const id=req.params.id;
+    app.delete("/delete-loan/:id", async (req, res) => {
+      const id = req.params.id;
 
-       const result=await loanApplication.deleteOne({_id: new ObjectId(id)});
-       res.send(result);
-    })
+      const result = await loanApplication.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
 
     //loanapplication find with email
     app.get("/get-loan", async (req, res) => {
@@ -110,9 +166,7 @@ async function run() {
     //get 6 loan
     app.get("/home-loans", async (req, res) => {
       try {
-        const result = await allloan
-          .find({ showOnHome: true })
-          .toArray();
+        const result = await allloan.find({ showOnHome: true }).toArray();
 
         res.send({
           status: "success",
@@ -231,7 +285,6 @@ async function run() {
           extraNotes,
         } = req.body;
 
-        
         let application = false;
 
         // If not, create new loan application
