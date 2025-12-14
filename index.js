@@ -2,15 +2,51 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const dotenv = require("dotenv");
-const port = process.env.PORT || 3000;
+const admin = require("firebase-admin");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
+
+dotenv.config();
+const port = process.env.PORT || 3000;
+
+// middlewares
 app.use(cors());
 app.use(express.json());
-dotenv.config();
 
+// firebase admin init
+const serviceAccount = require("./serviceAccountKey.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
+//verify firebase token middleware
+const verifyFirebaseToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+
+    const token = authHeader.split(" ")[1]; // Bearer
+    const decodedUser = await admin.auth().verifyIdToken(token);
+
+    req.user = decodedUser; // uid, email
+    next();
+  } catch (error) {
+    return res.status(401).send({ message: "Invalid token" });
+  }
+};
+
+module.exports = { admin, verifyFirebaseToken };
+
+
+
+
+
+//mongodb-uri
 const uri = process.env.MONGO_URI;
-
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -75,7 +111,7 @@ async function run() {
     });
 
     //get-all-loan for admin
-    app.get("/all-adminloan", async (req, res) => {
+    app.get("/all-adminloan",verifyFirebaseToken, async (req, res) => {
       const result = await loanApplication.find().toArray();
       res.send(result);
     });
