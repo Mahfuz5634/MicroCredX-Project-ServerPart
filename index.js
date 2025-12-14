@@ -4,10 +4,13 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const admin = require("firebase-admin");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-
+const Stripe = require("stripe");
 
 dotenv.config();
 const port = process.env.PORT || 3000;
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+// local dev er jonno
+const YOUR_DOMAIN = "http://localhost:5173";
 
 // middlewares
 app.use(cors());
@@ -38,14 +41,9 @@ const verifyFirebaseToken = async (req, res, next) => {
     return res.status(401).send({ message: "Invalid token" });
   }
 };
-
 module.exports = { admin, verifyFirebaseToken };
 
-
-
-
-
-//mongodb-uri
+//mongodb-uri-------------------------------------->>
 const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri, {
   serverApi: {
@@ -64,8 +62,88 @@ async function run() {
     const userCollection = db.collection("user");
     const loanApplication = db.collection("loan-application");
 
+    //stripe payment intregatin------------>>>>>>>>>>
+    app.post("/create-checkout-session", async (req, res) => {
+      try {
+        const paymentInfo = req.body;
+
+        if (
+          !paymentInfo.cost ||
+          !paymentInfo.senderEmail ||
+          !paymentInfo.loanId
+        ) {
+          return res.status(400).send({ error: "Missing required fields" });
+        }
+
+        const amount = parseInt(paymentInfo.cost) * 100;
+
+        const session = await stripe.checkout.sessions.create({
+          line_items: [
+            {
+              price_data: {
+                currency: "usd",
+                unit_amount: amount,
+                product_data: {
+                  name: `Application fee - ${paymentInfo.senderEmail}`,
+                },
+              },
+              quantity: 1,
+            },
+          ],
+          customer_email: paymentInfo.senderEmail,
+          mode: "payment",
+          metadata: {
+            parcelId: paymentInfo.loanId,
+          },
+          success_url: `${YOUR_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${YOUR_DOMAIN}/payment-cancel`,
+        });
+
+        res.send({ url: session.url });
+      } catch (error) {
+        console.error(error);
+        res.status(500).send({ error: error.message });
+      }
+    });
+
+    //payment-check------------------>>>
+    app.patch("/payment-success", async (req, res) => {
+      try {
+        const sessionId = req.query.session_id;
+
+        if (!sessionId) {
+          return res.status(400).send({ error: "session_id missing" });
+        }
+
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status === "paid") {
+          const id = session.metadata.parcelId;
+          console.log(id);
+          const query = { _id: new ObjectId(id) };
+
+          const update = {
+            $set: {
+              applicationFeeStatus: "paid",
+            },
+          };
+
+          const result = await loanApplication.updateOne(query, update);
+          return res.send({ success: true, result });
+        } else {
+          return res.status(400).send({
+            success: false,
+            message: "Payment not paid yet",
+          });
+        }
+      } catch (error) {
+        console.error("Payment success error:", error);
+        res.status(500).send({ error: error.message });
+      }
+    });
+
     //update admin request loan
-    app.put("/update-adminloan/:id",verifyFirebaseToken, async (req, res) => {
+    app.put("/update-adminloan/:id", verifyFirebaseToken, async (req, res) => {
       try {
         const id = req.params.id;
 
@@ -111,13 +189,13 @@ async function run() {
     });
 
     //get-all-loan for admin
-    app.get("/all-adminloan",verifyFirebaseToken, async (req, res) => {
+    app.get("/all-adminloan", verifyFirebaseToken, async (req, res) => {
       const result = await loanApplication.find().toArray();
       res.send(result);
     });
 
     //update-role-api
-    app.patch("/update-role/:id",verifyFirebaseToken, async (req, res) => {
+    app.patch("/update-role/:id", verifyFirebaseToken, async (req, res) => {
       try {
         const id = req.params.id;
         const { role } = req.body;
@@ -143,20 +221,20 @@ async function run() {
     });
 
     //all-user-api
-    app.get("/all-user",verifyFirebaseToken,async (req, res) => {
+    app.get("/all-user", verifyFirebaseToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
     //delete-loan
-    app.delete("/delete-loan/:id",verifyFirebaseToken, async (req, res) => {
+    app.delete("/delete-loan/:id", verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const result = await allloan.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
 
     //update-loan
-    app.put("/update-loan/:id",verifyFirebaseToken, async (req, res) => {
+    app.put("/update-loan/:id", verifyFirebaseToken, async (req, res) => {
       try {
         const id = req.params.id;
         const { title, shortDesc, interestRate, maxLimit, category, image } =
@@ -213,7 +291,7 @@ async function run() {
     });
 
     //add-loan
-    app.post("/add-loan",verifyFirebaseToken, async (req, res) => {
+    app.post("/add-loan", verifyFirebaseToken, async (req, res) => {
       try {
         const loan = req.body;
         const now = new Date();
@@ -232,7 +310,7 @@ async function run() {
     });
 
     //get all approved loan application
-    app.get("/get-Approved-loans",verifyFirebaseToken, async (req, res) => {
+    app.get("/get-Approved-loans", verifyFirebaseToken, async (req, res) => {
       const { email } = req.query;
       const result = await loanApplication
         .find({ status: "Approved" })
@@ -241,7 +319,7 @@ async function run() {
     });
 
     //update loan status
-    app.patch("/loan-status/:id",verifyFirebaseToken, async (req, res) => {
+    app.patch("/loan-status/:id", verifyFirebaseToken, async (req, res) => {
       try {
         const { status } = req.body;
         const id = req.params.id;
@@ -264,7 +342,7 @@ async function run() {
     });
 
     //get all pending loan application
-    app.get("/get-allloans",verifyFirebaseToken, async (req, res) => {
+    app.get("/get-allloans", verifyFirebaseToken, async (req, res) => {
       const { email } = req.query;
       const result = await loanApplication
         .find({ status: "Pending" })
@@ -281,7 +359,7 @@ async function run() {
     });
 
     //loanapplication find with email
-    app.get("/get-loan",verifyFirebaseToken, async (req, res) => {
+    app.get("/get-loan", verifyFirebaseToken, async (req, res) => {
       const { email } = req.query;
       const result = await loanApplication.find({ email }).toArray();
       res.send(result);
