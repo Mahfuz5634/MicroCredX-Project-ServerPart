@@ -65,7 +65,7 @@ async function run() {
     const loanApplication = db.collection("loan-application");
 
     //update admin request loan
-    app.put("/update-adminloan/:id", async (req, res) => {
+    app.put("/update-adminloan/:id",verifyFirebaseToken, async (req, res) => {
       try {
         const id = req.params.id;
 
@@ -117,7 +117,7 @@ async function run() {
     });
 
     //update-role-api
-    app.patch("/update-role/:id", async (req, res) => {
+    app.patch("/update-role/:id",verifyFirebaseToken, async (req, res) => {
       try {
         const id = req.params.id;
         const { role } = req.body;
@@ -143,20 +143,20 @@ async function run() {
     });
 
     //all-user-api
-    app.get("/all-user", async (req, res) => {
+    app.get("/all-user",verifyFirebaseToken,async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
 
     //delete-loan
-    app.delete("/delete-loan/:id", async (req, res) => {
+    app.delete("/delete-loan/:id",verifyFirebaseToken, async (req, res) => {
       const id = req.params.id;
       const result = await allloan.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
 
     //update-loan
-    app.put("/update-loan/:id", async (req, res) => {
+    app.put("/update-loan/:id",verifyFirebaseToken, async (req, res) => {
       try {
         const id = req.params.id;
         const { title, shortDesc, interestRate, maxLimit, category, image } =
@@ -213,7 +213,7 @@ async function run() {
     });
 
     //add-loan
-    app.post("/add-loan", async (req, res) => {
+    app.post("/add-loan",verifyFirebaseToken, async (req, res) => {
       try {
         const loan = req.body;
         const now = new Date();
@@ -232,7 +232,7 @@ async function run() {
     });
 
     //get all approved loan application
-    app.get("/get-Approved-loans", async (req, res) => {
+    app.get("/get-Approved-loans",verifyFirebaseToken, async (req, res) => {
       const { email } = req.query;
       const result = await loanApplication
         .find({ status: "Approved" })
@@ -241,7 +241,7 @@ async function run() {
     });
 
     //update loan status
-    app.patch("/loan-status/:id", async (req, res) => {
+    app.patch("/loan-status/:id",verifyFirebaseToken, async (req, res) => {
       try {
         const { status } = req.body;
         const id = req.params.id;
@@ -264,7 +264,7 @@ async function run() {
     });
 
     //get all pending loan application
-    app.get("/get-allloans", async (req, res) => {
+    app.get("/get-allloans",verifyFirebaseToken, async (req, res) => {
       const { email } = req.query;
       const result = await loanApplication
         .find({ status: "Pending" })
@@ -281,7 +281,7 @@ async function run() {
     });
 
     //loanapplication find with email
-    app.get("/get-loan", async (req, res) => {
+    app.get("/get-loan",verifyFirebaseToken, async (req, res) => {
       const { email } = req.query;
       const result = await loanApplication.find({ email }).toArray();
       res.send(result);
