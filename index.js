@@ -28,7 +28,76 @@ async function run() {
     const userCollection = db.collection("user");
     const loanApplication = db.collection("loan-application");
 
-    
+    //update admin request loan
+    app.put("/update-adminloan/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        const {
+          title,
+          image,
+          shortDesc,
+          description,
+          category,
+          interestRate,
+          maxLimit,
+          emiPlans,
+          showOnHome,
+        } = req.body;
+
+        const result = await allloan.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              title,
+              image,
+              shortDesc,
+              description,
+              category,
+              interestRate,
+              maxLimit,
+              emiPlans,
+              showOnHome,
+              updatedAt: new Date(),
+            },
+          }
+        );
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({ message: "Loan not found" });
+        }
+
+        res.send({ success: true, modifiedCount: result.modifiedCount });
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Failed to update loan" });
+      }
+    });
+
+    //get-all-loan for admin
+    app.get("/all-adminloan", async (req, res) => {
+      const result = await loanApplication.find().toArray();
+      res.send(result);
+    });
+
+    //update-role-api
+    app.patch("/update-role/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { role } = req.body;
+
+        const query = { _id: new ObjectId(id) };
+        const update = {
+          $set: {
+            role: role,
+          },
+        };
+        const result = await userCollection.updateOne(query, update);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Failed to update role" });
+      }
+    });
 
     //all-loan
     app.get("/all-loan", async (req, res) => {
