@@ -9,15 +9,18 @@ const Stripe = require("stripe");
 dotenv.config();
 const port = process.env.PORT || 3000;
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 // local dev er jonno
-const YOUR_DOMAIN = "http://localhost:5173";
+// const YOUR_DOMAIN = "http://localhost:5173";
 
 // middlewares
 app.use(cors());
 app.use(express.json());
 
 // firebase admin init
-const serviceAccount = require("./serviceAccountKey.json");
+// const serviceAccount = require("./firebase-admin-key.json");
+const decoded = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8')
+const serviceAccount = JSON.parse(decoded);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -41,7 +44,6 @@ const verifyFirebaseToken = async (req, res, next) => {
     return res.status(401).send({ message: "Invalid token" });
   }
 };
-module.exports = { admin, verifyFirebaseToken };
 
 //mongodb-uri-------------------------------------->>
 const uri = process.env.MONGO_URI;
@@ -55,7 +57,7 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    await client.connect();
+    //await client.connect();
 
     const db = client.db("microcredx");
     const allloan = db.collection("allloan");
@@ -95,11 +97,11 @@ async function run() {
           metadata: {
             parcelId: paymentInfo.loanId,
           },
-          success_url: `${YOUR_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${YOUR_DOMAIN}/payment-cancel`,
+          success_url: `${process.env.YOUR_DOMAIN}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${process.env.YOUR_DOMAIN}/payment-cancel`,
         });
 
-        res.send({ url: session.url });
+        res.send({ url: session.url });``
       } catch (error) {
         console.error(error);
         res.status(500).send({ error: error.message });
@@ -542,7 +544,7 @@ async function run() {
       }
     });
 
-    await client.db("admin").command({ ping: 1 });
+    //await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
     );
