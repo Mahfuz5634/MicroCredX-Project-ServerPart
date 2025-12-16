@@ -14,7 +14,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 // const YOUR_DOMAIN = "http://localhost:5173";
 
 // middlewares
-app.use(cors());
+
+app.use(
+  cors({
+    origin: [
+      "https://microcredx.vercel.app",
+      "http://localhost:5173"
+    ],
+    credentials: true,
+  })
+);
+
+
 app.use(express.json());
 
 // firebase admin init
@@ -142,6 +153,13 @@ async function run() {
         console.error("Payment success error:", error);
         res.status(500).send({ error: error.message });
       }
+    });
+
+   //delete user for admin
+    app.delete("/delete-user/:id", verifyFirebaseToken, async (req, res) => {
+      const id = req.params.id;
+      const result = await userCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
     });
 
     //update admin request loan
